@@ -1,7 +1,8 @@
---// CREEPER SCRIPT - INTERFAZ TIPO EXE
+--// CREEPER SCRIPT - INTERFAZ TIPO EXE CON ANIMACIONES
 
 local TweenService = game:GetService("TweenService")
 local player = game.Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
 
 -- Crear ScreenGui
 local gui = Instance.new("ScreenGui")
@@ -9,7 +10,9 @@ gui.Name = "CreeperScriptGUI"
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
--- BOTÓN PRINCIPAL (círculo)
+-- ==============================
+-- BOTÓN PRINCIPAL (BOLITA)
+-- ==============================
 local mainButton = Instance.new("ImageButton")
 mainButton.Parent = gui
 mainButton.Size = UDim2.new(0, 60, 0, 60)
@@ -18,23 +21,61 @@ mainButton.BackgroundTransparency = 0.1
 mainButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
 mainButton.Image = "rbxassetid://115287400808436"
 mainButton.AutoButtonColor = true
-mainButton.Draggable = true
+mainButton.ZIndex = 2
 
+-- Círculo
 local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(1, 0)
+corner.CornerRadius = UDim.new(1,0)
 corner.Parent = mainButton
 
+-- Título
 local title = Instance.new("TextLabel")
 title.Parent = mainButton
 title.Size = UDim2.new(1, 0, 0, 20)
-title.Position = UDim2.new(0, 0, -0.30, 0)
+title.Position = UDim2.new(0,0,-0.3,0)
 title.BackgroundTransparency = 1
 title.Text = "Creeper Script"
 title.Font = Enum.Font.Fantasy
 title.TextScaled = true
 title.TextColor3 = Color3.fromRGB(30,255,30)
 
--- MENÚ (2DA INTERFAZ)
+-- Hacer la bolita movible
+local dragging = false
+local dragInput, mousePos, framePos
+
+mainButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        mousePos = input.Position
+        framePos = mainButton.Position
+    end
+end)
+
+mainButton.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - mousePos
+        mainButton.Position = UDim2.new(
+            framePos.X.Scale, framePos.X.Offset + delta.X,
+            framePos.Y.Scale, framePos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+mainButton.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+-- ==============================
+-- MENÚ
+-- ==============================
 local menu = Instance.new("Frame")
 menu.Parent = gui
 menu.Size = UDim2.new(0, 110, 0, 140)
@@ -53,12 +94,12 @@ corner2.Parent = menu
 local menuScale = Instance.new("UIScale", menu)
 menuScale.Scale = 0.7
 
--- BOTONES
+-- BOTONES DEL MENÚ
 local function createButton(name, posY)
     local b = Instance.new("TextButton")
     b.Parent = menu
-    b.Size = UDim2.new(1, 0, 0, 25)
-    b.Position = UDim2.new(0, 0, 0, posY)
+    b.Size = UDim2.new(1,0,0,25)
+    b.Position = UDim2.new(0,0,0,posY)
     b.Text = name
     b.BackgroundColor3 = Color3.fromRGB(100,180,100)
     b.TextScaled = true
@@ -81,21 +122,29 @@ local noclipEnabled = false
 local antihitEnabled = false
 
 -- ==============================
--- ANIMACIÓN MENÚ + BOTÓN
+-- FUNCIONES ANIMACIONES
 -- ==============================
 
+-- Animación tipo "pop" de la bolita
+local function popAnimation()
+    local tweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local smaller = TweenService:Create(mainButton, tweenInfo, {Size = UDim2.new(0,50,0,50)})
+    local bigger = TweenService:Create(mainButton, tweenInfo, {Size = UDim2.new(0,60,0,60)})
+    smaller:Play()
+    smaller.Completed:Wait()
+    bigger:Play()
+end
+
+-- Animación del menú
 local openTweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local closeTweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 
-mainButton.MouseButton1Click:Connect(function()
+local function toggleMenu()
     local abrir = not menu.Visible
-
     if abrir then
         menu.Visible = true
-
         TweenService:Create(menuScale, openTweenInfo, {Scale = 1}):Play()
         TweenService:Create(menu, openTweenInfo, {BackgroundTransparency = 0.05}):Play()
-
         for _,v in ipairs(menu:GetDescendants()) do
             if v:IsA("GuiObject") then
                 TweenService:Create(v, openTweenInfo, {BackgroundTransparency = 0.1}):Play()
@@ -104,15 +153,10 @@ mainButton.MouseButton1Click:Connect(function()
                 TweenService:Create(v, openTweenInfo, {TextTransparency = 0}):Play()
             end
         end
-
-        TweenService:Create(mainButton, openTweenInfo, {
-            Size = UDim2.new(0, 70, 0, 70)
-        }):Play()
-
+        TweenService:Create(mainButton, openTweenInfo, {Size = UDim2.new(0,70,0,70)}):Play()
     else
         TweenService:Create(menuScale, closeTweenInfo, {Scale = 0.7}):Play()
         TweenService:Create(menu, closeTweenInfo, {BackgroundTransparency = 1}):Play()
-
         for _,v in ipairs(menu:GetDescendants()) do
             if v:IsA("GuiObject") then
                 TweenService:Create(v, closeTweenInfo, {BackgroundTransparency = 1}):Play()
@@ -121,21 +165,23 @@ mainButton.MouseButton1Click:Connect(function()
                 TweenService:Create(v, closeTweenInfo, {TextTransparency = 1}):Play()
             end
         end
-
-        TweenService:Create(mainButton, closeTweenInfo, {
-            Size = UDim2.new(0, 60, 0, 60)
-        }):Play()
-
+        TweenService:Create(mainButton, closeTweenInfo, {Size = UDim2.new(0,60,0,60)}):Play()
         task.wait(0.25)
         menu.Visible = false
     end
+end
+
+-- ==============================
+-- BOTÓN PRINCIPAL CLICK
+-- ==============================
+mainButton.MouseButton1Click:Connect(function()
+    popAnimation()
+    toggleMenu()
 end)
 
 -- ==============================
--- FUNCIONES DEL SCRIPT
+-- FUNCIONES DEL MENÚ
 -- ==============================
-
--- Guardar posición
 saveButton.MouseButton1Click:Connect(function()
     local char = player.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
@@ -146,7 +192,6 @@ saveButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- TP
 tpButton.MouseButton1Click:Connect(function()
     if savedPos then
         local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
@@ -156,24 +201,24 @@ tpButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- Speed
 speedButton.MouseButton1Click:Connect(function()
     local hum = player.Character and player.Character:FindFirstChild("Humanoid")
     if hum then hum.WalkSpeed = 60 end
 end)
 
--- Noclip
 noclipButton.MouseButton1Click:Connect(function()
     noclipEnabled = not noclipEnabled
     noclipButton.Text = noclipEnabled and "Noclip ON" or "Noclip"
 end)
 
--- Anti-hit
 antihitButton.MouseButton1Click:Connect(function()
     antihitEnabled = not antihitEnabled
     antihitButton.Text = antihitEnabled and "Anti-Hit ON" or "Anti-Hit OFF"
 end)
 
+-- ==============================
+-- LOOP PRINCIPAL
+-- ==============================
 game:GetService("RunService").Stepped:Connect(function()
     local char = player.Character
     if char then
