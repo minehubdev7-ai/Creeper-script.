@@ -1,12 +1,15 @@
 --// CREEPER SCRIPT - INTERFAZ TIPO EXE
 
+local TweenService = game:GetService("TweenService")
+local player = game.Players.LocalPlayer
+
 -- Crear ScreenGui
 local gui = Instance.new("ScreenGui")
 gui.Name = "CreeperScriptGUI"
 gui.ResetOnSpawn = false
-gui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+gui.Parent = player:WaitForChild("PlayerGui")
 
--- BOTÓN PRINCIPAL (redondo y pequeño)
+-- BOTÓN PRINCIPAL (círculo)
 local mainButton = Instance.new("ImageButton")
 mainButton.Parent = gui
 mainButton.Size = UDim2.new(0, 60, 0, 60)
@@ -31,13 +34,13 @@ title.Font = Enum.Font.Fantasy
 title.TextScaled = true
 title.TextColor3 = Color3.fromRGB(30,255,30)
 
--- MENÚ PRINCIPAL (2DA INTERFAZ) - 110×110 (GRIS)
+-- MENÚ (2DA INTERFAZ)
 local menu = Instance.new("Frame")
 menu.Parent = gui
 menu.Size = UDim2.new(0, 110, 0, 140)
 menu.Position = UDim2.new(0.3, 0, 0.35, 0)
 menu.BackgroundColor3 = Color3.fromRGB(60,60,60)
-menu.BackgroundTransparency = 0.1
+menu.BackgroundTransparency = 1
 menu.BorderSizePixel = 0
 menu.Visible = false
 menu.Active = true
@@ -47,73 +50,90 @@ local corner2 = Instance.new("UICorner")
 corner2.CornerRadius = UDim.new(0.25, 0)
 corner2.Parent = menu
 
--- Sin imagen de fondo
-local bg = Instance.new("ImageLabel")
-bg.Parent = menu
-bg.Size = UDim2.new(1, 0, 1, 0)
-bg.BackgroundTransparency = 1
-bg.Image = ""
+local menuScale = Instance.new("UIScale", menu)
+menuScale.Scale = 0.7
 
 -- BOTONES
-local saveButton = Instance.new("TextButton")
-saveButton.Parent = menu
-saveButton.Size = UDim2.new(1, 0, 0, 25)
-saveButton.Position = UDim2.new(0, 0, 0, 0)
-saveButton.Text = "Save"
-saveButton.BackgroundColor3 = Color3.fromRGB(100,180,100)
-saveButton.TextScaled = true
-saveButton.TextColor3 = Color3.new(1,1,1)
-saveButton.Font = Enum.Font.Fantasy
+local function createButton(name, posY)
+    local b = Instance.new("TextButton")
+    b.Parent = menu
+    b.Size = UDim2.new(1, 0, 0, 25)
+    b.Position = UDim2.new(0, 0, 0, posY)
+    b.Text = name
+    b.BackgroundColor3 = Color3.fromRGB(100,180,100)
+    b.TextScaled = true
+    b.TextColor3 = Color3.new(1,1,1)
+    b.Font = Enum.Font.Fantasy
+    b.BackgroundTransparency = 1
+    b.TextTransparency = 1
+    return b
+end
 
-local tpButton = Instance.new("TextButton")
-tpButton.Parent = menu
-tpButton.Size = UDim2.new(1, 0, 0, 25)
-tpButton.Position = UDim2.new(0, 0, 0, 25)
-tpButton.Text = "TP"
-tpButton.BackgroundColor3 = Color3.fromRGB(100,180,100)
-tpButton.TextScaled = true
-tpButton.TextColor3 = Color3.new(1,1,1)
-tpButton.Font = Enum.Font.Fantasy
+local saveButton = createButton("Save", 0)
+local tpButton = createButton("TP", 25)
+local speedButton = createButton("Speed 60", 50)
+local noclipButton = createButton("Noclip", 75)
+local antihitButton = createButton("Anti-Hit OFF", 100)
 
-local speedButton = Instance.new("TextButton")
-speedButton.Parent = menu
-speedButton.Size = UDim2.new(1, 0, 0, 25)
-speedButton.Position = UDim2.new(0, 0, 0, 50)
-speedButton.Text = "Speed 60"
-speedButton.BackgroundColor3 = Color3.fromRGB(100,180,100)
-speedButton.TextScaled = true
-speedButton.TextColor3 = Color3.new(1,1,1)
-speedButton.Font = Enum.Font.Fantasy
-
-local noclipButton = Instance.new("TextButton")
-noclipButton.Parent = menu
-noclipButton.Size = UDim2.new(1, 0, 0, 25)
-noclipButton.Position = UDim2.new(0, 0, 0, 75)
-noclipButton.Text = "Noclip"
-noclipButton.BackgroundColor3 = Color3.fromRGB(100,180,100)
-noclipButton.TextScaled = true
-noclipButton.TextColor3 = Color3.new(1,1,1)
-noclipButton.Font = Enum.Font.Fantasy
-
-local antihitButton = Instance.new("TextButton")
-antihitButton.Parent = menu
-antihitButton.Size = UDim2.new(1, 0, 0, 25)
-antihitButton.Position = UDim2.new(0, 0, 0, 100)
-antihitButton.Text = "Anti-Hit OFF"
-antihitButton.BackgroundColor3 = Color3.fromRGB(180,100,100)
-antihitButton.TextScaled = true
-antihitButton.TextColor3 = Color3.new(1,1,1)
-antihitButton.Font = Enum.Font.Fantasy
-
--- LÓGICA
+-- VARIABLES
 local savedPos = nil
 local noclipEnabled = false
 local antihitEnabled = false
-local player = game.Players.LocalPlayer
+
+-- ==============================
+-- ANIMACIÓN MENÚ + BOTÓN
+-- ==============================
+
+local openTweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local closeTweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 
 mainButton.MouseButton1Click:Connect(function()
-    menu.Visible = not menu.Visible
+    local abrir = not menu.Visible
+
+    if abrir then
+        menu.Visible = true
+
+        TweenService:Create(menuScale, openTweenInfo, {Scale = 1}):Play()
+        TweenService:Create(menu, openTweenInfo, {BackgroundTransparency = 0.05}):Play()
+
+        for _,v in ipairs(menu:GetDescendants()) do
+            if v:IsA("GuiObject") then
+                TweenService:Create(v, openTweenInfo, {BackgroundTransparency = 0.1}):Play()
+            end
+            if v:IsA("TextLabel") or v:IsA("TextButton") then
+                TweenService:Create(v, openTweenInfo, {TextTransparency = 0}):Play()
+            end
+        end
+
+        TweenService:Create(mainButton, openTweenInfo, {
+            Size = UDim2.new(0, 70, 0, 70)
+        }):Play()
+
+    else
+        TweenService:Create(menuScale, closeTweenInfo, {Scale = 0.7}):Play()
+        TweenService:Create(menu, closeTweenInfo, {BackgroundTransparency = 1}):Play()
+
+        for _,v in ipairs(menu:GetDescendants()) do
+            if v:IsA("GuiObject") then
+                TweenService:Create(v, closeTweenInfo, {BackgroundTransparency = 1}):Play()
+            end
+            if v:IsA("TextLabel") or v:IsA("TextButton") then
+                TweenService:Create(v, closeTweenInfo, {TextTransparency = 1}):Play()
+            end
+        end
+
+        TweenService:Create(mainButton, closeTweenInfo, {
+            Size = UDim2.new(0, 60, 0, 60)
+        }):Play()
+
+        task.wait(0.25)
+        menu.Visible = false
+    end
 end)
+
+-- ==============================
+-- FUNCIONES DEL SCRIPT
+-- ==============================
 
 -- Guardar posición
 saveButton.MouseButton1Click:Connect(function()
@@ -126,7 +146,7 @@ saveButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- Teleport
+-- TP
 tpButton.MouseButton1Click:Connect(function()
     if savedPos then
         local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
@@ -136,12 +156,10 @@ tpButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- Speed 60
+-- Speed
 speedButton.MouseButton1Click:Connect(function()
     local hum = player.Character and player.Character:FindFirstChild("Humanoid")
-    if hum then
-        hum.WalkSpeed = 60
-    end
+    if hum then hum.WalkSpeed = 60 end
 end)
 
 -- Noclip
@@ -150,10 +168,15 @@ noclipButton.MouseButton1Click:Connect(function()
     noclipButton.Text = noclipEnabled and "Noclip ON" or "Noclip"
 end)
 
+-- Anti-hit
+antihitButton.MouseButton1Click:Connect(function()
+    antihitEnabled = not antihitEnabled
+    antihitButton.Text = antihitEnabled and "Anti-Hit ON" or "Anti-Hit OFF"
+end)
+
 game:GetService("RunService").Stepped:Connect(function()
     local char = player.Character
     if char then
-        -- Noclip
         if noclipEnabled then
             for _, p in ipairs(char:GetDescendants()) do
                 if p:IsA("BasePart") then
@@ -161,7 +184,7 @@ game:GetService("RunService").Stepped:Connect(function()
                 end
             end
         end
-        -- Anti-Hit
+
         if antihitEnabled then
             local hum = char:FindFirstChild("Humanoid")
             if hum then
@@ -172,10 +195,4 @@ game:GetService("RunService").Stepped:Connect(function()
             end
         end
     end
-end)
-
--- Anti-Hit Toggle
-antihitButton.MouseButton1Click:Connect(function()
-    antihitEnabled = not antihitEnabled
-    antihitButton.Text = antihitEnabled and "Anti-Hit ON" or "Anti-Hit OFF"
 end)
